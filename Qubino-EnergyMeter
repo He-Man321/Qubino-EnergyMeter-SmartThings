@@ -1,9 +1,9 @@
 /* Qubino Energy Meter ZMNHTD1 by He-Man321
-Version 1.0 - 2020/10/18
+Version 	1.0 - 2020/10/18
+		1.1 - 2020/10/28 - Fixed configuration problem
 NOTE: 	Make sure you add this device using the QR code on the side of the device, not by simply scanning for nearby devices from the hub.
 		Once added, confirm the My Devices page in the IDE shows the device as: "networkSecurityLevel: ZWAVE_S2_AUTHENTICATED"
-        Failure to do this will result in corrupt data from the device.
-*/
+        Failure to do this will result in corrupt data from the device. */
 metadata {
 	definition (name: "Qubino Energy Meter", namespace: "He-Man321", author: "He-Man321") {
 		capability "Energy Meter"
@@ -56,25 +56,24 @@ def installed() {
 }
 
 def updated() {
+	def cmds = []
 	if (zwaveInfo.model.equals("0052")) {
 		log.debug "Setting Qubino to $change% change (parameter 40) or every $interval seconds (parameter 42)"
-        delayBetween([
-			encap(zwave.configurationV1.configurationSet(parameterNumber:40, size:1, scaledConfigurationValue:change.toInteger())),
-			encap(zwave.configurationV1.configurationSet(parameterNumber:42, size:2, scaledConfigurationValue:interval.toInteger()))
-		],1000)
-    	}
+        cmds << zwave.configurationV1.configurationSet(parameterNumber:40,size:1,scaledConfigurationValue:change.toInteger())
+        cmds << zwave.configurationV1.configurationSet(parameterNumber:42,size:2,scaledConfigurationValue:interval.toInteger())
+	}
 	else
-		log.debug "Unknown model: $zwaveInfo.model"        
-    def cmds = []
-    def params = [7,11,12,13,14,40,42,45,100,110,111,112]
-    log.debug("Scanning parameters $params")
-    (params).each { i ->
-    	cmds << zwave.configurationV2.configurationGet(parameterNumber: i)
-    }    
-    sendHubCommand(cmds.collect{response(zwave.securityV1.securityMessageEncapsulation().encapsulate(it))}, 1000)    
+		log.debug "Unknown model: $zwaveInfo.model"
+    //def params = [7,11,12,13,14,40,42,45,100,110,111,112]
+    //log.debug("Scanning parameters $params")
+    //(params).each { i ->
+    //	cmds << zwave.configurationV2.configurationGet(parameterNumber: i)
+    //}
+    sendHubCommand(cmds.collect{response(zwave.securityV1.securityMessageEncapsulation().encapsulate(it))},1000)
 }
 
-def parse(String description) {	
+def parse(String description) {
+	log.debug ("Parse $description")
     def result = null
     def cmd = zwave.parse(description, [0x31: 1, 0x32: 3, 0x60: 3])
     if (cmd) result = createEvent(zwaveEvent(cmd))
